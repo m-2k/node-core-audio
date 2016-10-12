@@ -189,16 +189,16 @@ var deviceName = engine.getDeviceName(0)
 /**
  * Returns the maximum input channels of a given device id.
  * Note: This can be used to identify input devices (must be > 0 to be an input device).
- *
- * @type {number} The maximum input channels for a given device id.
+ * @param {number} device_id The device id to get max input channels for.
+ * @return {number} The maximum input channels for a given device id.
  */
 var deviceMaxInputChannels = engine.getDeviceMaxInputChannels(0)
 
 /**
  * Returns the maximum output channels of a given device id.
  * Note: This can be used to identify output devices (must be > 0 to be an output device).
- *
- * @type {number} The maximum output channels for a given device id.
+ * @param {number} device_id The device id to get max output channels for.
+ * @return {number} The maximum output channels for a given device id.
  */
 var deviceMaxOutputChannels = engine.getDeviceMaxOutputChannels(0)
 
