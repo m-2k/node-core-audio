@@ -230,6 +230,19 @@ AudioEngine.prototype.getDeviceName = function( deviceId ) {
 	return this.audioEngine.getDeviceName( deviceId );
 } // end AudioEngine.getDeviceName()
 
+//////////////////////////////////////////////////////////////////////////
+// Returns the name of a given device 
+AudioEngine.prototype.getDeviceMaxInputChannels = function( deviceId ) {
+	return this.audioEngine.getDeviceMaxInputChannels( deviceId );
+} // end AudioEngine.getDeviceName()
+
+
+//////////////////////////////////////////////////////////////////////////
+// Returns the total number of audio devices
+AudioEngine.prototype.getDeviceMaxOutputChannels = function( deviceId ) {
+	return this.audioEngine.getDeviceMaxOutputChannels( deviceId );
+} // end AudioEngine.getNumDevices()
+
 
 //////////////////////////////////////////////////////////////////////////
 // Returns the total number of audio devices

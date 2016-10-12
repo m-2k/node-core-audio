@@ -51,6 +51,10 @@ namespace Audio {
 		//! Get the name of an audio device with a given ID number
 		//static v8::Handle<v8::Value> getDeviceName( const v8::Arguments& args );
         static NAN_METHOD(getDeviceName);
+        //! Get the maxInputChannels of an audio device with a given ID number
+        static NAN_METHOD(getDeviceMaxInputChannels);
+        //! Get the maxOutputChannels of an audio device with a given ID number
+        static NAN_METHOD(getDeviceMaxOutputChannels);
 		//! Get the number of available devices
 		//static v8::Handle<v8::Value> getNumDevices( const v8::Arguments& args );
         static NAN_METHOD(getNumDevices);

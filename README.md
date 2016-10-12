@@ -104,15 +104,15 @@ The callback is only called if all buffers has been processed by the soundcard.
 Audio Engine Options
 =====
 
-Option          | Type    | Default                  | Description
-----------------|---------|--------------------------|----------------------------------------
-sampleRate      | number  | 44100                    | The sample rate of the incoming audio.
-sampleFormat    | string  | `sampleFormatFloat32`    | The sample format to use. Allowed `sampleFormatFloat32`, `sampleFormatInt32`, `sampleFormatInt24`, `sampleFormatInt16`, `sampleFormatInt8`, `sampleFormatUInt8`
-framesPerBuffer | number  | 1024                     | The count of frames per buffer (per channel).
-interleaved     | boolean | `false`                  | If set to `true` the samples are given as a two dimensional array `[channel][sample]`, otherwise the samples are given as a one dimensional array with alternating channel values.
-inputChannels   | number  | 1                        | Count of input channels.
-ouputChannels   | number  | 2                        | Count of ouput channels.
-inputDevice     | number  | Default device id.        | Device id of the system's default input device.
+Option          | Type    | Default                   | Description
+----------------|---------|---------------------------|----------------------------------------
+sampleRate      | number  | 44100                     | The sample rate of the incoming audio.
+sampleFormat    | string  | `sampleFormatFloat32`     | The sample format to use. Allowed `sampleFormatFloat32`, `sampleFormatInt32`, `sampleFormatInt24`, `sampleFormatInt16`, `sampleFormatInt8`, `sampleFormatUInt8`
+framesPerBuffer | number  | 1024                      | The count of frames per buffer (per channel).
+interleaved     | boolean | `false`                   | If set to `true` the samples are given as a two dimensional array `[channel][sample]`, otherwise the samples are given as a one dimensional array with alternating channel values.
+inputChannels   | number  | 1                         | Count of input channels.
+ouputChannels   | number  | 2                         | Count of ouput channels.
+inputDevice     | number  | Default input device id.  | Device id of the system's default input device.
 outputDevice    | number  | Default output device id. | Device id of the system's default output device.
 
 API
@@ -185,6 +185,22 @@ var underflow = engine.write([0.42, ...])
  * @return {string} The device name for the given id.
  */
 var deviceName = engine.getDeviceName(0)
+
+/**
+ * Returns the maximum input channels of a given device id.
+ * Note: This can be used to identify input devices (must be > 0 to be an input device).
+ *
+ * @type {number} The maximum input channels for a given device id.
+ */
+var deviceMaxInputChannels = engine.getDeviceMaxInputChannels(0)
+
+/**
+ * Returns the maximum output channels of a given device id.
+ * Note: This can be used to identify output devices (must be > 0 to be an output device).
+ *
+ * @type {number} The maximum output channels for a given device id.
+ */
+var deviceMaxOutputChannels = engine.getDeviceMaxOutputChannels(0)
 
 /**
  * Returns the total number of audio devices.

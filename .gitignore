@@ -8,3 +8,4 @@ node_modules/
 NodeCoreAudio.suo
 NodeCoreAudio.opensdf
 NodeCoreAudio.sdf
+test.js

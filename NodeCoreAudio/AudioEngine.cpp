@@ -430,6 +430,8 @@ NAN_MODULE_INIT(Audio::AudioEngine::Init) {
 	//functionTemplate->PrototypeTemplate()->Set( Nan::New<String>("getNumDevices"), Nan::New<FunctionTemplate>(Audio::AudioEngine::getNumDevices)->GetFunction() );
     Nan::SetPrototypeMethod(functionTemplate, "isActive", Audio::AudioEngine::isActive);
     Nan::SetPrototypeMethod(functionTemplate, "getDeviceName", Audio::AudioEngine::getDeviceName);
+    Nan::SetPrototypeMethod(functionTemplate, "getDeviceMaxInputChannels", Audio::AudioEngine::getDeviceMaxInputChannels);
+    Nan::SetPrototypeMethod(functionTemplate, "getDeviceMaxOutputChannels", Audio::AudioEngine::getDeviceMaxOutputChannels);
     Nan::SetPrototypeMethod(functionTemplate, "getNumDevices", Audio::AudioEngine::getNumDevices);
 
 	// Set
@@ -582,6 +584,41 @@ void Audio::AudioEngine::getDeviceName(const Nan::FunctionCallbackInfo<v8::Value
 
 	info.GetReturnValue().Set( Nan::New<String>(pDeviceInfo->name).ToLocalChecked() );
 } // end AudioEngine::GetDeviceName()
+
+//////////////////////////////////////////////////////////////////////////////
+/*! Get the name of an audio device with a given ID number */
+void Audio::AudioEngine::getDeviceMaxInputChannels(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+    Nan::HandleScope scope;
+	//HandleScope scope;
+
+	if( !info[0]->IsNumber() ) {
+		return  Nan::ThrowTypeError("getDeviceMaxInputChannels() requires a device index");
+	}
+
+	Local<Number> deviceIndex = Local<Number>::Cast( info[0] );
+
+	const PaDeviceInfo* pDeviceInfo = Pa_GetDeviceInfo( (PaDeviceIndex)deviceIndex->NumberValue() );
+
+	info.GetReturnValue().Set( Nan::New<Number>(pDeviceInfo->maxInputChannels) );
+} // end AudioEngine::getDeviceMaxInputChannels()
+
+//////////////////////////////////////////////////////////////////////////////
+/*! Get the name of an audio device with a given ID number */
+void Audio::AudioEngine::getDeviceMaxOutputChannels(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+    Nan::HandleScope scope;
+	//HandleScope scope;
+
+	if( !info[0]->IsNumber() ) {
+		return  Nan::ThrowTypeError("getDeviceMaxOutputChannels() requires a device index");
+	}
+
+	Local<Number> deviceIndex = Local<Number>::Cast( info[0] );
+
+	const PaDeviceInfo* pDeviceInfo = Pa_GetDeviceInfo( (PaDeviceIndex)deviceIndex->NumberValue() );
+
+	info.GetReturnValue().Set( Nan::New<Number>(pDeviceInfo->maxOutputChannels) );
+} // end AudioEngine::getDeviceMaxOutputChannels()
+
 
 
 //////////////////////////////////////////////////////////////////////////////
