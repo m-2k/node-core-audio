@@ -31,6 +31,37 @@ Active contributors:
 
 - [rmedaer](https://github.com/rmedaer)
 
+Prerequisites
+=====
+
+Install portaudio and fftw3 as shared libraries by e.g. compiling them from the sources:
+
+Download [portaudio](http://www.portaudio.com/archives/pa_stable_v19_20140130.tgz), unpack it and then in the folder:
+
+```
+./configure
+make clean
+make
+sudo make install
+```
+
+Download [fftw3](http://www.fftw.org/fftw-3.3.5.tar.gz), unpack it and then in the folder:
+
+```
+./configure --enable-shared
+make
+sudo make install
+```
+
+Alternatively you can install the libraries by using a package manager:
+
+MacOS (homebrew):  
+
+```
+brew install portaudio 
+brew install fftw
+```
+
 Installation
 =====
 

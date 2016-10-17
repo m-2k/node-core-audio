@@ -12,11 +12,11 @@
 #include <uv.h>
 #include <node.h>
 #include <node_object_wrap.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 #if !(defined( __WINDOWS__ ) || defined( _WIN32 ))
 	#include <unistd.h>
-	#include <string.h>
+	#include <cstring>
 #endif
 
 using namespace v8; using namespace std;

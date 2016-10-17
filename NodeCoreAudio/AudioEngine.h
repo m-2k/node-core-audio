@@ -5,7 +5,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-#include "portaudio.h"
+#include <portaudio.h>
 #include <v8.h>
 #include <vector>
 #include <node_object_wrap.h>
@@ -17,7 +17,7 @@ using namespace v8; using namespace std;
 #define DEFAULT_FRAMES_PER_BUFFER  (256)
 #define DEFAULT_NUM_BUFFERS        (8)
 
-#include <complex.h>
+//#include <complex.h>
 #include <fftw3.h>
 #include <string>
 #include "WindowFunction.h"

@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-#include <math.h>
+#include <cmath>
 
 /**
  * The possible window function types.

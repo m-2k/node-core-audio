@@ -11,7 +11,7 @@ using namespace v8;
 
 #include <string>
 #include "AudioEngine.h"
-#include <stdio.h>
+#include <cstdio>
 
 /*
 //Handle<Value> CreateEngine(const Arguments& args) 

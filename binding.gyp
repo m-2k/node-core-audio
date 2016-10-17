@@ -8,16 +8,18 @@
 				'NodeCoreAudio/WindowFunction.cpp',
 			],
 			'include_dirs': [
-                "<!(node -e \"require('nan')\")",
-				'<(module_root_dir)/NodeCoreAudio/',
-				'<(module_root_dir)/portaudio/',
-				'/usr/local/include/'
+                '<!(node -e "require(\'nan\')")',
+				'<(module_root_dir)/NodeCoreAudio/'
 			],
-			"conditions" : [
+			'conditions' : [
 				[
 					'OS=="linux"', {
-						"libraries" : [
-							'<(module_root_dir)/gyp/lib/libportaudio.a'
+						'include_dirs': [
+							'/usr/local/include/'
+						],
+						'libraries' : [
+							'/usr/local/lib/libportaudio.so',
+							'/usr/local/lib/libfftw3.so'
 						],
 						'cflags!': [ '-fno-exceptions' ],
 						'cflags_cc!': [ '-fno-exceptions' ],
@@ -26,14 +28,17 @@
 				],
 				[
 					'OS=="mac"', {
-						"libraries" : [
-							'<(module_root_dir)/gyp/lib/libportaudio.a',
+						'include_dirs': [
+							'/usr/local/include/'
+						],
+						'libraries' : [
 							'/Library/Frameworks/CoreAudio.framework',
 							'/Library/Frameworks/AudioToolbox.framework',
 							'/Library/Frameworks/AudioUnit.framework',
 							'/Library/Frameworks/CoreServices.framework',
 							'/Library/Frameworks/Carbon.framework',
-							'/usr/local/lib/libfftw3.a'
+							'/usr/local/lib/libportaudio.dylib',
+							'/usr/local/lib/libfftw3.dylib'
 						],
 						'cflags!': [ '-fno-exceptions' ],
 						'cflags_cc!': [ '-fno-exceptions' ],
@@ -45,7 +50,7 @@
 						"conditions": [
 							[
 								'target_arch=="ia32"', {
-									"libraries" : [
+									'libraries' : [
 										'<(module_root_dir)/gyp/lib/win32/portaudio_x86.lib'
 									],
 									'copies': [
@@ -61,7 +66,7 @@
 							],
 							[
 								'target_arch=="x64"', {
-									"libraries" : [
+									'libraries' : [
 										'<(module_root_dir)/gyp/lib/win64/portaudio_x64.lib'
 									],
 									'copies': [
@@ -77,7 +82,7 @@
 							]
 						],
 
-						"include_dirs" : [ "gyp/include" ]
+						'include_dirs' : [ "gyp/include" ]
 					}
 				]
 			]
