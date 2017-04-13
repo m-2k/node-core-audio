@@ -14,7 +14,7 @@
 #include <node_object_wrap.h>
 #include <stdlib.h>
 
-#ifdef __linux__
+#if !(defined( __WINDOWS__ ) || defined( _WIN32 ))
 	#include <unistd.h>
 	#include <string.h>
 #endif
