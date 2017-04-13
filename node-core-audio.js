@@ -34,7 +34,7 @@ function AudioEngine( options ) {
 
 	var defaultOptions = {
 		inputChannels: 1,
-		outputChannels: 2,
+		outputChannels: 1,
 		framesPerBuffer: 1024,
 		useMicrophone: true
 	};

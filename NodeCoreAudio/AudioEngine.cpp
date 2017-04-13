@@ -83,15 +83,15 @@ Audio::AudioEngine::AudioEngine( Local<Object> options ) :
 
 	applyOptions( options );
 
-	fprintf( stderr, "input :%d\n", m_uInputDevice );
-	fprintf( stderr, "output :%d\n", m_uOutputDevice );
-	fprintf( stderr, "rate :%d\n", m_uSampleRate );
-	fprintf( stderr, "format :%d\n", m_uSampleFormat );
-	fprintf( stderr, "size :%ld\n", sizeof(float) );
-	fprintf( stderr, "inputChannels :%d\n", m_uInputChannels );
-	fprintf( stderr, "outputChannels :%d\n", m_uOutputChannels );
-	fprintf( stderr, "interleaved :%d\n", m_bInterleaved );
-	fprintf( stderr, "uses input: %d\n", m_bReadMicrophone);
+	//fprintf( stderr, "input :%d\n", m_uInputDevice );
+	//fprintf( stderr, "output :%d\n", m_uOutputDevice );
+	//fprintf( stderr, "rate :%d\n", m_uSampleRate );
+	//fprintf( stderr, "format :%d\n", m_uSampleFormat );
+	//fprintf( stderr, "size :%ld\n", sizeof(float) );
+	//fprintf( stderr, "inputChannels :%d\n", m_uInputChannels );
+	//fprintf( stderr, "outputChannels :%d\n", m_uOutputChannels );
+	//fprintf( stderr, "interleaved :%d\n", m_bInterleaved );
+	//fprintf( stderr, "uses input: %d\n", m_bReadMicrophone);
 
 	// Open an audio I/O stream.
 	openStreamErr = Pa_OpenStream(  &m_pPaStream,
