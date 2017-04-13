@@ -5,11 +5,13 @@
 			'sources': [
 				'NodeCoreAudio/AudioEngine.cpp',
 				'NodeCoreAudio/NodeCoreAudio.cpp',
+				'NodeCoreAudio/WindowFunction.cpp',
 			],
 			'include_dirs': [
                 "<!(node -e \"require('nan')\")",
 				'<(module_root_dir)/NodeCoreAudio/',
-				'<(module_root_dir)/portaudio/'
+				'<(module_root_dir)/portaudio/',
+				'/usr/local/include/'
 			],
 			"conditions" : [
 				[
@@ -30,7 +32,8 @@
 							'/Library/Frameworks/AudioToolbox.framework',
 							'/Library/Frameworks/AudioUnit.framework',
 							'/Library/Frameworks/CoreServices.framework',
-							'/Library/Frameworks/Carbon.framework'
+							'/Library/Frameworks/Carbon.framework',
+							'/usr/local/lib/libfftw3.a'
 						],
 						'cflags!': [ '-fno-exceptions' ],
 						'cflags_cc!': [ '-fno-exceptions' ],

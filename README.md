@@ -104,16 +104,19 @@ The callback is only called if all buffers has been processed by the soundcard.
 Audio Engine Options
 =====
 
-Option          | Type    | Default                   | Description
-----------------|---------|---------------------------|----------------------------------------
-sampleRate      | number  | 44100                     | The sample rate of the incoming audio.
-sampleFormat    | string  | `sampleFormatFloat32`     | The sample format to use. Allowed `sampleFormatFloat32`, `sampleFormatInt32`, `sampleFormatInt24`, `sampleFormatInt16`, `sampleFormatInt8`, `sampleFormatUInt8`
-framesPerBuffer | number  | 1024                      | The count of frames per buffer (per channel).
-interleaved     | boolean | `false`                   | If set to `true` the samples are given as a two dimensional array `[channel][sample]`, otherwise the samples are given as a one dimensional array with alternating channel values.
-inputChannels   | number  | 1                         | Count of input channels.
-ouputChannels   | number  | 2                         | Count of ouput channels.
-inputDevice     | number  | Default input device id.  | Device id of the system's default input device.
-outputDevice    | number  | Default output device id. | Device id of the system's default output device.
+Option          | Type      | Default                   | Description
+----------------|-----------|---------------------------|----------------------------------------
+sampleRate      | number    | 44100                     | The sample rate of the incoming audio.
+sampleFormat    | string    | `sampleFormatFloat32`     | The sample format to use. Allowed `sampleFormatFloat32`, `sampleFormatInt32`, `sampleFormatInt24`, `sampleFormatInt16`, `sampleFormatInt8`, `sampleFormatUInt8`
+framesPerBuffer | number    | 1024                      | The count of frames per buffer (per channel).
+interleaved     | boolean   | `false`                   | If set to `true` the samples are given as a two dimensional array `[channel][sample]`, otherwise the samples are given as a one dimensional array with alternating channel values.
+inputChannels   | number    | 1                         | Count of input channels.
+ouputChannels   | number    | 2                         | Count of ouput channels.
+inputDevice     | number    | Default input device id.  | Device id of the system's default input device.
+outputDevice    | number    | Default output device id. | Device id of the system's default output device.
+fftWindowSize   | number    | 1024                      | The window size for the fft's
+fftOverlapSize  | number    | 0.0                       | The overlap size for the fft windows. (0.5 = 50%, 0 = no overlapping)
+fftWindowFunction | string  | `Blackman`                | The window function to apply. Allowed `Square`, `VonHann`, `Hamming`, `Blackman`, `BlackmanHarris`, `BlackmanNuttall`, `FlatTop`
 
 API
 =====
@@ -207,12 +210,24 @@ var deviceMaxOutputChannels = engine.getDeviceMaxOutputChannels(0)
  * @return {number} The count of audio devices.
  */
 var totalDevices = engine.getNumDevices()
+
+
+/**
+ * Sets the callback function for fft results of the incoming audio stream.
+ *
+ * @param  {(channel, samples)=>void} callback The callback function receiving the channel number of the fft result and the fft samples for this channel.
+ */
+engine.setFFTCallback((channel, samples) => {
+    
+})
+
 ```
 
 Known Issues / TODO
 =====
 
-* Add FFTW to C++ extension, so you can get fast FFT's from javascript, and also register for the FFT of incoming audio, rather than the audio itself
+* ~~Add FFTW to C++ extension, so you can get fast FFT's from javascript, and also register for the FFT of incoming audio, rather than the audio itself~~
+* Extend FFTW functions to allow sending own audio data rather than only subscribing to the incoming audio
 * Add support for streaming audio over sockets
 
 

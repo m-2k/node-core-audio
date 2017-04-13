@@ -81,17 +81,15 @@ Audio::AudioEngine::AudioEngine( Local<Object> options ) :
 	if( initErr != paNoError )
 		Nan::ThrowTypeError("Failed to initialize audio engine");
 
-	applyOptions( options );
+	// Set fft defaults
+	fft_callback.Reset();
+	fft_window_size = 1024;
+	fft_overlap_size = 0.0;
+	fft_window_function_type = Blackman;
 
-	//fprintf( stderr, "input :%d\n", m_uInputDevice );
-	//fprintf( stderr, "output :%d\n", m_uOutputDevice );
-	//fprintf( stderr, "rate :%d\n", m_uSampleRate );
-	//fprintf( stderr, "format :%d\n", m_uSampleFormat );
-	//fprintf( stderr, "size :%ld\n", sizeof(float) );
-	//fprintf( stderr, "inputChannels :%d\n", m_uInputChannels );
-	//fprintf( stderr, "outputChannels :%d\n", m_uOutputChannels );
-	//fprintf( stderr, "interleaved :%d\n", m_bInterleaved );
-	//fprintf( stderr, "uses input: %d\n", m_bReadMicrophone);
+	fft_resources_allocated = false;
+
+	applyOptions( options );	
 
 	// Open an audio I/O stream.
 	openStreamErr = Pa_OpenStream(  &m_pPaStream,
@@ -116,6 +114,30 @@ Audio::AudioEngine::AudioEngine( Local<Object> options ) :
 	uv_thread_create( &ptStreamThread, do_work, (void*)this );
 
 } // end Constructor
+
+/**
+ * Allocates the fft resources for input stream fft computations.
+ */
+void Audio::AudioEngine::setupFFT() {
+	if (fft_resources_allocated) freeFFT();
+
+	//printf("Allocating fft stuff\n");
+	fft_window_function = new WindowFunction(fft_window_function_type, fft_window_size);
+
+	fft_windows = new double*[m_uInputChannels];
+	fft_window_idx = new int[m_uInputChannels];
+
+	fft_results = (fftw_complex**) malloc(m_uInputChannels * sizeof(fftw_complex*));
+	fft_plans = (fftw_plan*) malloc(m_uInputChannels * sizeof(fftw_plan));
+	
+	for (int iChannel = 0; iChannel < m_uInputChannels; ++iChannel) {
+		fft_windows[iChannel] = new double[fft_window_size];
+		fft_window_idx[iChannel] = 0;
+		fft_results[iChannel] = (fftw_complex*) fftw_malloc(((fft_window_size / 2) + 1) * sizeof(fftw_complex));
+		fft_plans[iChannel] = fftw_plan_dft_r2c_1d(fft_window_size, fft_windows[iChannel], fft_results[iChannel], FFTW_ESTIMATE);
+	}
+	fft_resources_allocated = true;
+}
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -160,7 +182,9 @@ void Audio::AudioEngine::setOptions(const Nan::FunctionCallbackInfo<v8::Value>& 
 	}
 
 	AudioEngine* pEngine = AudioEngine::Unwrap<AudioEngine>( info.This() );
+	pEngine->freeFFT();
 	pEngine->applyOptions( options );
+	pEngine->setupFFT();
 
     	info.GetReturnValue().SetUndefined();
 } // end AudioEngine::SetOptions()x
@@ -199,6 +223,43 @@ void Audio::AudioEngine::applyOptions( Local<Object> options ) {
 		}
 	}
 
+	
+	// Free the resources that where allocated before
+	freeFFT();
+
+	// FFT options
+	if (Nan::HasOwnProperty(options, Nan::New<String>("fftWindowSize").ToLocalChecked()).FromMaybe(false) ) {
+		int desiredWindowSize = Nan::To<int>(Nan::Get(options, Nan::New<String>("fftWindowSize").ToLocalChecked()).ToLocalChecked()).FromJust();
+		if (desiredWindowSize < 256 || desiredWindowSize > 4096 || (desiredWindowSize & (desiredWindowSize - 1)) != 0) {
+			printf("Invalid fft window size %i (fft window size must be a power of two between 256 and 4096).\n", desiredWindowSize);
+		} else {
+			fft_window_size = desiredWindowSize;
+		}
+	}
+	if (Nan::HasOwnProperty(options, Nan::New<String>("fftOverlapSize").ToLocalChecked()).FromMaybe(false) ) {
+		float desiredOverlapSize = (float)Nan::To<double>(Nan::Get(options, Nan::New<String>("fftOverlapSize").ToLocalChecked()).ToLocalChecked()).FromJust();
+		if (desiredOverlapSize >= 1 || desiredOverlapSize < 0) {
+			printf("Invalid fft overlap size %f (fft overlap size must be a number >= 0 and < 1)\n", desiredOverlapSize);
+		} else {
+			fft_overlap_size = desiredOverlapSize;
+		}
+	}
+	if (Nan::HasOwnProperty(options, Nan::New<String>("fftWindowFunction").ToLocalChecked()).FromMaybe(false) ) {
+		Local<String> _str = Nan::To<String>(Nan::Get(options, Nan::New<String>("fftWindowFunction").ToLocalChecked()).ToLocalChecked()).ToLocalChecked();
+		char* desiredWindowFunction = (char*)(*String::Utf8Value(_str));
+		
+		
+			if (strcmp(desiredWindowFunction, "Square") == 0)				fft_window_function_type = Square;
+			else if (strcmp(desiredWindowFunction, "VonHann") == 0)			fft_window_function_type = VonHann;
+			else if (strcmp(desiredWindowFunction, "Hamming") == 0)			fft_window_function_type = Hamming;
+			else if (strcmp(desiredWindowFunction, "Blackman") == 0) 		fft_window_function_type = Blackman;
+			else if (strcmp(desiredWindowFunction, "BlackmanHarris") == 0)	fft_window_function_type = BlackmanHarris;
+			else if (strcmp(desiredWindowFunction, "BlackmanNuttall") == 0)	fft_window_function_type = BlackmanNuttall;
+			else if (strcmp(desiredWindowFunction, "FlatTop") == 0)			fft_window_function_type = FlatTop;
+			else printf("Unknown window function %s.\n", desiredWindowFunction);
+	}
+
+
 	// Setup our input and output parameters
 	m_inputParams.device = m_uInputDevice;
 	m_inputParams.channelCount = m_uInputChannels;
@@ -211,6 +272,8 @@ void Audio::AudioEngine::applyOptions( Local<Object> options ) {
 	m_outputParams.sampleFormat = m_uSampleFormat;
 	m_outputParams.suggestedLatency = Pa_GetDeviceInfo(m_outputParams.device)->defaultLowOutputLatency;
 	m_outputParams.hostApiSpecificStreamInfo = NULL;
+
+	//printf("Interleaved %d\n", m_bInterleaved);
 
 	// Clear out our temp buffer blocks
 	if( m_cachedInputSampleBlock != NULL )
@@ -235,6 +298,9 @@ void Audio::AudioEngine::applyOptions( Local<Object> options ) {
 	m_cachedOutputSampleBlockForWriting = (char*)malloc( m_uSamplesPerBuffer * m_uOutputChannels * m_uSampleSize );
 	m_uNumCachedOutputSamples = (unsigned int*)calloc( sizeof(unsigned int), m_uNumBuffers );
 
+	// Reallocate the fft resources for the new settings
+	setupFFT();
+
 	if( m_pPaStream != NULL && Pa_IsStreamActive(m_pPaStream) )
 		restartStream();
 
@@ -252,8 +318,21 @@ Local<Array> Audio::AudioEngine::getInputBuffer() {
 			m_hInputBuffer->Set( iSample, getSample(iSample) );
 		}
 	} else {
-		m_hInputBuffer = Nan::New<Array>( m_uInputChannels );
-		for( int iChannel=0; iChannel<m_uInputChannels; iChannel++ ) {
+		// The NonInterleaved flag will never be set, therefore 
+		// we create a non interleaved array [channel][sample]
+		m_hInputBuffer = Nan::New<Array>(m_uInputChannels);
+		for(int iChannel = 0; iChannel < m_uInputChannels; ++iChannel) {
+			auto tempBuffer = Local<Array>(Nan::New<Array>(m_uSamplesPerBuffer));
+			int rSample = 0;
+			for (int iSample = iChannel; iSample < m_uSamplesPerBuffer; iSample += m_uInputChannels) {
+				tempBuffer->Set(rSample, getSample(iSample));
+				++rSample;
+			}
+			m_hInputBuffer->Set(iChannel, tempBuffer);
+		}
+
+		//m_hInputBuffer = Nan::New<Array>( m_uInputChannels );
+		/*for( int iChannel=0; iChannel<m_uInputChannels; iChannel++ ) {
 			auto tempBuffer = Local<Array>( Nan::New<Array>(m_uSamplesPerBuffer) );
 
 			for( int iSample=0; iSample<m_uSamplesPerBuffer; iSample++ ) {
@@ -261,7 +340,7 @@ Local<Array> Audio::AudioEngine::getInputBuffer() {
 			}
 
 			m_hInputBuffer->Set( iChannel, tempBuffer );
-		}
+		}*/
 	}
 
 	return scope.Escape( m_hInputBuffer );
@@ -304,6 +383,93 @@ Handle<Number> Audio::AudioEngine::getSample( int position ) {
 
     return scope.Escape(sample);
 } // end AudioEngine::getSample()
+
+
+/**
+ * Sets the fft callback function.
+ */
+void Audio::AudioEngine::setFFTCallback(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+    Nan::HandleScope scope;
+
+	AudioEngine* pEngine = AudioEngine::Unwrap<AudioEngine>( info.This() );
+
+	if (info.Length() > 1 || !info[0]->IsFunction()){
+        return Nan::ThrowTypeError("First argument must be a callback function.");
+	}
+
+	//pEngine->fft_callback(Local<Function>::Cast(info[0]));
+	//pEngine->fft_callback.SetFunction(Local<Function>::Cast(info[0]));
+	pEngine->fft_callback.Reset(Local<Function>::Cast(info[0]));
+}
+
+/**
+ * Returns a sound card sample converted to a double.
+ */
+double Audio::AudioEngine::getDoubleSample( int position ) {
+	switch( m_uSampleFormat ) {
+		case paFloat32:
+			return (double)((float*)m_cachedInputSampleBlock)[position];
+		case paInt32:
+			return (double)((int*)m_cachedInputSampleBlock)[position];
+		case paInt24:
+			return (double)((m_cachedInputSampleBlock[3*position + 0] << 16)
+							+ (m_cachedInputSampleBlock[3*position + 1] << 8)
+							+ (m_cachedInputSampleBlock[3*position + 2]));
+		case paInt16:
+			return (double)((int16_t*)m_cachedInputSampleBlock)[position];
+	}
+	return (double)m_cachedInputSampleBlock[position]*-1;
+} // end AudioEngine::getSample()
+
+/**
+ * Fills the fft windows and executes them when they are full.
+ */
+void Audio::AudioEngine::fillWindows() {
+	if (fft_resources_allocated == false || fft_callback.IsEmpty()) return;
+
+	// Fill the channel fft windows
+	for (int iSample = 0; iSample < m_uSamplesPerBuffer * m_uInputChannels; ++iSample) {
+		int iChannel = iSample % m_uInputChannels;
+		double sample = getDoubleSample(iSample + iChannel);
+		fft_windows[iChannel][fft_window_idx[iChannel]] = sample * fft_window_function->at(fft_window_idx[iChannel]);
+		
+		// Check if the fft window for this channel is full and the fft plan can be executed
+		++fft_window_idx[iChannel];
+		if (fft_window_idx[iChannel] >= fft_window_size) {
+			runPlan(iChannel);
+			fft_window_idx[iChannel] = 0;
+			
+			// Add the overlapping last values to the window again
+			if (fft_overlap_size > 0.0 && fft_overlap_size <= 1.0) {
+				int overlapping_samples = (int) floor(fft_overlap_size * (float)fft_window_size);
+				for (int iOverlap = fft_window_size - overlapping_samples; iOverlap < fft_window_size; ++iOverlap) {
+					fft_windows[iChannel][fft_window_idx[iChannel]] = fft_windows[iChannel][iOverlap];
+					++fft_window_idx[iChannel];
+				}
+			}
+
+			// Create an array of the result and normalize it
+			int result_length = (fft_window_size / 2) + 1;
+
+			Local<Array> results = Nan::New<Array>(result_length);
+			for (int i = 0; i < result_length; ++i) {
+				//results[i] = fft_results[iChannel][i][0];
+				double db = 10.0f * log(fft_results[iChannel][i][0]*fft_results[iChannel][i][0] + fft_results[iChannel][i][1]*fft_results[iChannel][i][1]) / log(10.0);
+				results->Set(i, Nan::New<Number>(db));
+			}
+			
+			v8::Local<v8::Value> argv[2] = {Nan::New<Number>(iChannel), results};
+			fft_callback.Call(2, argv);
+		}
+	}
+}
+
+/**
+ * Executes the plan for a specific channel.
+ */
+void Audio::AudioEngine::runPlan(int iChannel) {
+	fftw_execute(fft_plans[iChannel]);
+}
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -350,15 +516,24 @@ void Audio::AudioEngine::queueOutputBuffer( Handle<Array> result ) {
 		m_uNumCachedOutputSamples[m_uCurrentWriteBuffer] = result->Length()/m_uOutputChannels;
 
 	} else {
-		// Validate the structure of the output buffer array
-		if( !result->Get(0)->IsArray() ) {
-			Nan::ThrowTypeError("Output buffer not properly setup, 0th channel is not an array");
-			return;
-		}
-
 		Local<Array> item;
-
-		for( int iChannel=0; iChannel<m_uOutputChannels; ++iChannel ) {
+		for(int iChannel = 0; iChannel < m_uOutputChannels; ++iChannel) {
+			item = Local<Array>::Cast(result->Get(iChannel));
+			if (!item->IsArray()) {
+				char errStr [50];
+				sprintf(errStr, "Output buffer not properly setup, %ith channel is not an array", iChannel);
+				Nan::ThrowTypeError(errStr);
+				return;
+			}
+			if (item->Length() > m_uNumCachedOutputSamples[m_uCurrentWriteBuffer])
+				m_uNumCachedOutputSamples[m_uCurrentWriteBuffer] = item->Length();
+			int rSample = iChannel;
+			for(int iSample = 0; iSample < m_uSamplesPerBuffer; ++iSample) {
+				rSample += m_uOutputChannels;
+				setSample(rSample, item->Get(iSample));
+			}
+		}
+		/*for( int iChannel=0; iChannel<m_uOutputChannels; ++iChannel ) {
 			for( int iSample=0; iSample<m_uSamplesPerBuffer; ++iSample ) {
 
 				item = Local<Array>::Cast( result->Get(iChannel) );
@@ -369,7 +544,7 @@ void Audio::AudioEngine::queueOutputBuffer( Handle<Array> result ) {
 					setSample( iSample, item->Get(iSample) );
 				}
 			} // end for each sample
-		} // end for each channel
+		} // end for each channel*/
 	}
 	m_uCurrentWriteBuffer = (m_uCurrentWriteBuffer + 1)%m_uNumBuffers;
 } // end AudioEngine::queueOutputBuffer()
@@ -445,6 +620,8 @@ NAN_MODULE_INIT(Audio::AudioEngine::Init) {
     Nan::SetPrototypeMethod(functionTemplate, "write", Audio::AudioEngine::write);
     Nan::SetPrototypeMethod(functionTemplate, "read", Audio::AudioEngine::read);
     Nan::SetPrototypeMethod(functionTemplate, "isBufferEmpty", Audio::AudioEngine::isBufferEmpty);
+
+    Nan::SetPrototypeMethod(functionTemplate, "setFFTCallback", Audio::AudioEngine::setFFTCallback);
 
 	//constructor = Persistent<Function>::New( functionTemplate->GetFunction() );
     //Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(EOLFinder::New);
@@ -548,6 +725,9 @@ void Audio::AudioEngine::read(const Nan::FunctionCallbackInfo<v8::Value>& info) 
 	}
 
 	Local<Array> input = pEngine->getInputBuffer();
+
+	// Add the samples to the fft windows and execute them if possible
+	pEngine->fillWindows();
 
 	info.GetReturnValue().Set( input );
 } // end AudioEngine::Read()
@@ -679,6 +859,25 @@ void Audio::AudioEngine::wrapObject( v8::Handle<v8::Object> object ) {
 	ObjectWrap::Wrap( object );
 } // end AudioEngine::wrapObject()
 
+/**
+ * Frees the fft resources	
+ */
+void Audio::AudioEngine::freeFFT() {
+	// Check if the resources have been allocated
+	if (fft_resources_allocated == false) return;
+	//printf("Deallocating fft stuff\n");
+    for (int iChannel = 0; iChannel < m_uInputChannels; ++iChannel) {
+		delete[] fft_windows[iChannel];
+		fftw_free(fft_results[iChannel]);
+		fftw_destroy_plan(fft_plans[iChannel]);
+	}
+	delete[] fft_windows;
+	delete[] fft_window_idx;
+	free(fft_results);
+	free(fft_plans);
+	delete fft_window_function;
+	fft_resources_allocated = false;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 /*! OOL Destructor */
@@ -688,4 +887,7 @@ Audio::AudioEngine::~AudioEngine() {
 
 	if( err != paNoError )
 		fprintf( stderr, "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+
+	// Free fft resources
+    freeFFT();
 } // end AudioEngine::~AudioEngine()

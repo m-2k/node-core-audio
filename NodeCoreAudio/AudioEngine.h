@@ -17,6 +17,11 @@ using namespace v8; using namespace std;
 #define DEFAULT_FRAMES_PER_BUFFER  (256)
 #define DEFAULT_NUM_BUFFERS        (8)
 
+#include <complex.h>
+#include <fftw3.h>
+#include <string>
+#include "WindowFunction.h"
+
 namespace Audio {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -85,6 +90,13 @@ namespace Audio {
 		Local<Array> getInputBuffer();							//!< Returns a v8 array filled with input samples
 		Handle<Number> getSample( int position );				//!< Returns a sound card sample converted to a v8 Number
 
+		void setupFFT();
+		void freeFFT();
+		static NAN_METHOD(setFFTCallback);//void setFFTCallback(v8::Local<v8::Function> function);	//!< Sets the fft callback
+		double getDoubleSample(int position);					//!< Returns a soundcard sample as double for fftw
+		void fillWindows();										//!< Fills the windows with all available samples and tries to execute the plan on full windows.
+		void runPlan(int iChannel);								//!< Runs the fftw plan for a specific channel
+
 		PaStream *m_pPaStream;				//!< The PortAudio stream object
 		PaStreamParameters m_inputParams,	//!< PortAudio stream parameters
 						   m_outputParams;
@@ -111,7 +123,7 @@ namespace Audio {
 		bool m_bInputOverflowed,			//!< Set when our buffers have overflowed
 			 m_bOutputUnderflowed,
 			 m_bReadMicrophone,
-			 m_bInterleaved;				//!< Set when we're processing interleaved buffers
+			 m_bInterleaved;				// This will never actually be used as flag for portaudio and channels are always interleaved therefore internally //!< Set when we're processing interleaved buffers
 
 		char* m_cachedInputSampleBlock,		//!< Temp buffer to hold buffer results
 			** m_cachedOutputSampleBlock,
@@ -120,6 +132,28 @@ namespace Audio {
 		Isolate* m_pIsolate;
 
 		Locker* m_pLocker;
+
+		// fftw stuff
+		/** An indicator if the resources for the fft's are allocated. */
+		bool fft_resources_allocated;
+		/** The callback function */
+		Nan::Callback fft_callback;
+		/** The fft size */
+		int fft_window_size;
+		/** The relative overlap size of the windows (0 >= fft_overlap_size < 1). 0 means no overlap, 0.5 would mean 50%. */
+		float fft_overlap_size;
+		/** The window function to use on the fft windows */
+		WindowFunction* fft_window_function;
+		/** The type of window function to use */
+		WindowFunctionType fft_window_function_type;
+		/** The windows for each channel */
+		double** fft_windows;
+		/** The current window filling index for each channel */
+		int* fft_window_idx;
+		/** The fft_results for each channel */
+		fftw_complex** fft_results;
+		/** The fft plans for each channel */
+		fftw_plan* fft_plans;
 
 	}; // end class AudioEngine
 

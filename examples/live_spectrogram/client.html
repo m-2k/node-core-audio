@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>node-core-audio spectrogram</title>
+ 		<script src="/socket.io/socket.io.js"></script>
+ 		<script>var socket = io();</script>
+ 		<style>body, html {margin: 0;}</style>
+	</head>
+	<body>
+		<img id="colormap" src="colormap.png" style="display: none;"/>
+		<canvas id="channel-0" width="2000", height="513" style="background-color: black;"></canvas>
+		<!-- You can enable the second channel drawing by adjusting the inputChannels/outputChannels to 2
+			and remove display:none; here if your devices support 2 channels recording/playback  -->
+		<canvas id="channel-1" width="2000", height="513" style="background-color: black;display:none;"></canvas>
+		<script>
+			// Get the imagedata from colormap.png
+			var colormap = document.getElementById('colormap');
+			colormap.onload = function() {
+				var mapWidth = colormap.width;
+				var mapHeight = colormap.height;
+				var mapCanvas = document.createElement('canvas');
+				mapCanvas.width = mapWidth;
+				mapCanvas.height = mapHeight;
+				var mapCtx = mapCanvas.getContext('2d');
+				mapCtx.drawImage(colormap, 0, 0, mapWidth, mapHeight);
+				colormap.parentNode.removeChild(colormap);
+
+				/**
+				 * Returns the color value for a normalized value.
+				 *
+				 * @param  {number} val A normalized number between 0..1
+				 *
+				 * @return {Array}     An array with r, g, b and alpha values between 0..255
+				 */
+				function getColor(val) {
+					return mapCtx.getImageData(10, val * (mapHeight-1), 1, 1).data;
+				}
+
+				/**
+				 * Normalizes the samples that are between -1..1 (when not clipping) to a value between 0..1
+				 *
+				 * @param  {number} val The fft value.
+				 *
+				 * @return {number}     The normalized value between 0..1
+				 */
+				function normVal(val) {
+					var minDB = -120;
+					var maxDB = 20;
+					val = Math.min(maxDB, val);
+					val = Math.max(minDB, val);
+					val = (val - maxDB) / (minDB - maxDB);
+					return val;
+				}
+
+				var canvas0 = document.getElementById('channel-0');
+				var ctx0 = canvas0.getContext('2d');
+
+				var canvas1 = document.getElementById('channel-1');
+				var ctx1 = canvas1.getContext('2d');
+
+				var x = [0, 0];
+				socket.on('fft', function(channel, samples) {
+					// Reject not 1st or 2nd channels
+					if (channel > 1) return;
+					// Select the context for the first or second channel
+					var ctx = channel === 0 ? ctx0 : ctx1;
+					// Draw a pixel for each sample
+					for (var iSample = 0; iSample < samples.length; ++iSample) {
+						var pxl = ctx.createImageData(1, 1);
+						var mapData = getColor(normVal(samples[iSample]));
+						pxl.data[0] = mapData[0];
+						pxl.data[1] = mapData[1];
+						pxl.data[2] = mapData[2];
+						pxl.data[3] = mapData[3];
+						ctx.putImageData(pxl, x[channel], samples.length - iSample);
+					}
+					++x[channel];
+				})
+			}
+		</script>
+	</body>
+</html>

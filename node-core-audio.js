@@ -158,6 +158,15 @@ AudioEngine.prototype.getProcessAudio = function() {
 } // end AudioEngine.getProcessAudio()
 
 
+/**
+ * Sets the fft callback function.
+ *
+ * @param {Function} callback The callback function.
+ */
+AudioEngine.prototype.setFFTCallback = function(callback) {
+	this.audioEngine.setFFTCallback(callback)
+}
+
 AudioEngine.prototype.setSampleRate = function(val) {
 	if (typeof val === 'number') {
 		clearTimeout(this.sampleTimer);
